@@ -1,5 +1,116 @@
 import React, { useState, useRef, useEffect } from 'react'
 
+// API utility functions
+const api = {
+  // Simulate API call for search
+  search: async (query) => {
+    try {
+      // Simulate network delay
+      await new Promise(resolve => setTimeout(resolve, 1500))
+      
+      // Simulate API response
+      const responses = [
+        {
+          success: true,
+          data: {
+            answer: `Based on your query "${query}", here's what I found: This is a comprehensive answer that provides detailed information about your topic. The search results indicate multiple relevant sources that can help answer your question.`,
+            sources: ['source1.com', 'source2.com'],
+            timestamp: new Date().toISOString()
+          }
+        },
+        {
+          success: true,
+          data: {
+            answer: `Great question about "${query}"! After analyzing various sources, I can tell you that this is a complex topic with several interesting aspects to consider. Let me break this down for you in detail.`,
+            sources: ['research.org', 'academic.edu'],
+            timestamp: new Date().toISOString()
+          }
+        },
+        {
+          success: true,
+          data: {
+            answer: `Searching for "${query}"... I've found some fascinating insights! This topic has been discussed extensively, and there are multiple perspectives worth considering. Here's a summary of the key findings.`,
+            sources: ['news.com', 'blog.net'],
+            timestamp: new Date().toISOString()
+          }
+        }
+      ]
+      
+      return responses[Math.floor(Math.random() * responses.length)]
+    } catch (error) {
+      return {
+        success: false,
+        error: 'Failed to fetch search results'
+      }
+    }
+  },
+
+  // Upload file
+  uploadFile: async (file) => {
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      return {
+        success: true,
+        data: {
+          filename: file.name,
+          size: file.size,
+          type: file.type,
+          uploadedAt: new Date().toISOString()
+        }
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: 'Failed to upload file'
+      }
+    }
+  },
+
+  // Get user notifications
+  getNotifications: async () => {
+    try {
+      await new Promise(resolve => setTimeout(resolve, 500))
+      return {
+        success: true,
+        data: {
+          count: 3,
+          notifications: [
+            { id: 1, message: 'New search feature available!', read: false },
+            { id: 2, message: 'Your subscription is expiring soon', read: false },
+            { id: 3, message: 'Check out our latest updates', read: true }
+          ]
+        }
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: 'Failed to fetch notifications'
+      }
+    }
+  },
+
+  // Save chat history
+  saveChatHistory: async (query, response) => {
+    try {
+      await new Promise(resolve => setTimeout(resolve, 300))
+      return {
+        success: true,
+        data: {
+          id: Date.now(),
+          query,
+          response,
+          savedAt: new Date().toISOString()
+        }
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: 'Failed to save chat history'
+      }
+    }
+  }
+}
+
 const App = () => {
   const [searchQuery, setSearchQuery] = useState('')
   const [showResult, setShowResult] = useState(false)
@@ -7,25 +118,24 @@ const App = () => {
   const [isLoading, setIsLoading] = useState(false)
   const [activeNav, setActiveNav] = useState('home')
   const [searchContainerFocused, setSearchContainerFocused] = useState(false)
+  const [error, setError] = useState(null)
   const searchInputRef = useRef(null)
   const searchContainerRef = useRef(null)
 
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e) => {
-      // Ctrl/Cmd + K to focus search
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
         e.preventDefault()
         searchInputRef.current?.focus()
       }
 
-      // Escape to clear
       if (e.key === 'Escape') {
         setSearchQuery('')
         setShowResult(false)
+        setError(null)
       }
 
-      // Enter to submit
       if (e.key === 'Enter' && searchQuery.trim()) {
         handleSubmit()
       }
@@ -35,14 +145,15 @@ const App = () => {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [searchQuery])
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (searchQuery.trim() === '') {
-      alert('Please enter a search query!')
+      setError('Please enter a search query!')
       return
     }
 
     setShowResult(true)
     setIsLoading(true)
+    setError(null)
     setResultContent(
       <div className="typing-indicator">
         <span></span>
@@ -51,101 +162,105 @@ const App = () => {
       </div>
     )
 
-    // Simulate AI response
-    setTimeout(() => {
-      const responses = [
-        `Based on your query "${searchQuery}", here's what I found: This is a comprehensive answer that provides detailed information about your topic. The search results indicate multiple relevant sources that can help answer your question.`,
-        `Great question about "${searchQuery}"! After analyzing various sources, I can tell you that this is a complex topic with several interesting aspects to consider. Let me break this down for you in detail.`,
-        `Searching for "${searchQuery}"... I've found some fascinating insights! This topic has been discussed extensively, and there are multiple perspectives worth considering. Here's a summary of the key findings.`
-      ]
-
-      const randomResponse = responses[Math.floor(Math.random() * responses.length)]
-      setResultContent(randomResponse)
-      setIsLoading(false)
-    }, 1500)
+    // Call API using utils/api.js
+    const response = await api.search(searchQuery)
+    
+    if (response.success) {
+      setResultContent(response.data.answer)
+      // Save to chat history
+      await api.saveChatHistory(searchQuery, response.data.answer)
+    } else {
+      setError(response.error || 'Something went wrong. Please try again.')
+      setResultContent('Failed to get response. Please try again.')
+    }
+    
+    setIsLoading(false)
   }
 
   const handleNewChat = () => {
     setSearchQuery('')
     setShowResult(false)
-    alert('Starting a new chat!')
+    setError(null)
+    console.log('Starting new chat')
   }
 
   const handleNavigation = (section) => {
     setActiveNav(section)
     console.log(`Navigated to: ${section}`)
-    alert(`Navigating to ${section.charAt(0).toUpperCase() + section.slice(1)} section`)
   }
 
   const handleSearch = () => {
     console.log('Search mode activated')
-    alert('Search mode activated!')
   }
 
   const handleAddContent = () => {
     console.log('Add content clicked')
-    alert('Add content feature!')
   }
 
-  const handleAttachment = () => {
-    console.log('Attachment button clicked')
+  const handleAttachment = async () => {
     const input = document.createElement('input')
     input.type = 'file'
     input.accept = 'image/*,.pdf,.doc,.docx'
-    input.onchange = (e) => {
+    input.onchange = async (e) => {
       const file = e.target.files[0]
       if (file) {
-        alert(`File selected: ${file.name}`)
+        console.log('Uploading file...')
+        const response = await api.uploadFile(file)
+        
+        if (response.success) {
+          alert(`File uploaded successfully: ${response.data.filename}`)
+        } else {
+          alert('Failed to upload file')
+        }
       }
     }
     input.click()
   }
 
   const handleLanguage = () => {
-    console.log('Language selector clicked')
     const languages = ['English', 'Spanish', 'French', 'German', 'Chinese', 'Japanese']
     const selectedLang = languages[Math.floor(Math.random() * languages.length)]
-    alert(`Language: ${selectedLang}`)
+    console.log(`Language changed to: ${selectedLang}`)
   }
 
   const handleFocus = () => {
     console.log('Focus mode toggled')
-    alert('Focus mode toggled!')
   }
 
   const handleSettings = () => {
     console.log('Settings opened')
-    alert('Opening settings...')
   }
 
-  const handleNotifications = () => {
-    console.log('Notifications clicked')
-    alert('You have 3 new notifications!')
+  const handleNotifications = async () => {
+    console.log('Fetching notifications...')
+    const response = await api.getNotifications()
+    
+    if (response.success) {
+      const unreadCount = response.data.notifications.filter(n => !n.read).length
+      alert(`You have ${unreadCount} unread notifications!`)
+    } else {
+      alert('Failed to fetch notifications')
+    }
   }
 
   const handleAccount = () => {
     console.log('Account clicked')
-    alert('Opening account settings...')
   }
 
   const handleUpgrade = () => {
     console.log('Upgrade clicked')
-    alert('Upgrade to Premium for unlimited searches!')
   }
 
   const handleInstall = () => {
     console.log('Install clicked')
-    alert('Install the Perplexity app for a better experience!')
   }
 
   const handleLanguageSettings = () => {
     console.log('Language settings clicked')
-    alert('Change language preferences')
   }
 
   const handleHelp = () => {
     console.log('Help clicked')
-    alert('How can we help you today?')
   }
 
   return (
@@ -248,7 +363,20 @@ const App = () => {
 
       {/* Main Content */}
       <div className="main-content">
-        <h1 className="title">perplexity</h1>
+        <h1 className="title">Header</h1>
+
+        {error && (
+          <div style={{
+            color: '#ff4444',
+            marginBottom: '20px',
+            padding: '12px 20px',
+            backgroundColor: 'rgba(255, 68, 68, 0.1)',
+            borderRadius: '8px',
+            border: '1px solid rgba(255, 68, 68, 0.3)'
+          }}>
+            {error}
+          </div>
+        )}
 
         <div
           className={`search-container ${searchContainerFocused ? 'focused' : ''}`}
@@ -313,7 +441,11 @@ const App = () => {
                   <line x1="8" y1="12" x2="16" y2="12" strokeWidth="2" strokeLinecap="round" />
                 </svg>
               </button>
-              <button className="submit-btn" onClick={handleSubmit}>
+              <button 
+                className="submit-btn" 
+                onClick={handleSubmit}
+                disabled={isLoading}
+              >
                 <svg viewBox="0 0 24 24" fill="none">
                   <path d="M12 19V5M5 12l7-7 7 7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>

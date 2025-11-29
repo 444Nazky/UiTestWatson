@@ -5,3 +5,11 @@
 *.css text eol=lf
 *.html text eol=lf
 *.md text eol=lf
+
+# Vendored files
+node_modules/ linguist-vendored
+dist/ linguist-generated
+
+# Main language detection
+*.jsx linguist-language=JavaScript
+src/** linguist-language=JavaScript
